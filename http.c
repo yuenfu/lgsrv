@@ -1481,14 +1481,6 @@ static	void	DoPostData( SkLine *l, char *data, int len )
 	}
 }
 
-#if 0
-static	int		http_snapshot_avail=0;
-static	int		http_snapshot_running=0;
-static	int		http_snapshot_busy=0;
-static	int		http_snapshot_failed=1;
-static	int		http_no_cam=1;
-#endif
-
 extern	void	RestartMe( void );
 
 void	HttpPck( SkLine *l, int pt, void *own, void *sys )
@@ -1685,7 +1677,7 @@ static		int		cur_mode=-1;
 			{
 				for( cur_mode=0; cur_mode < 3; cur_mode++ )
 				{
-					if ( !strcasecmp(modes[cur_mode],json.mode) )
+					if ( json.mode && !strcasecmp(modes[cur_mode],json.mode) )
 						break;
 				}
 			}
@@ -1788,29 +1780,36 @@ static		int		cur_mode=-1;
 		skMultiDisable(l,0);
 	
 		// Execute command
-		sprintf(buff,"dd if=/dev/camclone bs=153600 count=1 2>/dev/null");
-		fp=popen(buff,"r");
+//		sprintf(buff,"dd if=/dev/camclone bs=153600 count=1 2>/dev/null");
+//		fp=popen(buff,"r");
+		fp=fopen("/dev/camclone","r");
 		int		xb;
 		int		xsum=0;
-		xb=fread(buff,1,5000,fp);
-		while( xb>0 )
+		int		maxb=153600;
+		if ( fp )
 		{
-			x=xb;
-			_WritePacket(l,(unsigned char*)buff,x);
-			xsum+=x;
-			if ( l->out && ( l->out->fill - l->out->ptr > 100000 ))
-				_SyncLine(l);
-			if ( xb < 5000 )
-				break;
 			xb=fread(buff,1,5000,fp);
+			while( xb>0 )
+			{
+				maxb-=xb;
+				x=xb;
+				_WritePacket(l,(unsigned char*)buff,x);
+				xsum+=x;
+				if ( l->out && ( l->out->fill - l->out->ptr > 100000 ))
+					_SyncLine(l);
+				if (( xb < 5000 ) || !maxb )
+					break;
+				xb=fread(buff,1,maxb>5000?5000:maxb,fp);
+			}
+	//		pclose(fp);
+			fclose(fp);
 		}
-		pclose(fp);
 		skCloseAtEmpty(l);
 		Log(8,"%p pedro yuv image: %d bytes written\r\n",l,xsum);
-		
+
 		_SyncLine(l);
 		skMultiEnable(l,0);
-	
+
 		return;
 	}
 	else if ( !strncmp(data,"GET / HTTP",10) )
@@ -1919,26 +1918,3 @@ void HttpStatAddClData( void )
 {
 	sum_cmd++;
 }
-
-#if 0
-void HttpPictureDone( int rc )
-{
-	http_snapshot_failed=1;
-	if ( !rc )
-	{
-		rename( "/usr/tmp/v0.jpg", "/usr/tmp/v1.jpg" );
-		http_snapshot_failed=0;
-	}
-	http_snapshot_avail=1;
-}
-
-int HttpNeedPicture( void )
-{
-	return http_snapshot_running ? 1 :0;	/* no */
-}
-
-void	HttpSetNoCam( void )
-{
-	http_no_cam=1;
-}
-#endif

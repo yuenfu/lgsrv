@@ -181,10 +181,12 @@ static	void	_checkTimer( SkTimerType tid, void *own )
 	struct tm	tm;
 	int			hour=0, min=0;
 	char		rest[500];
+	char		tline[500];
 	char		*text=0;
 	char		*admode=0;
 	char		**argv=0;
 	int			argc=0;
+	char		*p=0;
 
 	/* check current day */
 	now=time(0);
@@ -227,84 +229,102 @@ static	void	_checkTimer( SkTimerType tid, void *own )
 		return;
 	}
 
-	sscanf(text,"%d:%d%s",&hour,&min,rest);
-	admode=strchr(rest,',');
-	if(admode)
+	strcpy(tline,text);
+	text=tline;
+	while( 1 )
 	{
-		*admode=0;
-		argv=M5sStrgCut( admode+1, &argc, 1 );
-	}
+		p=strchr(text,'+');
+		if ( p )
+			*p=0;
+		sscanf(text,"%d:%d%s",&hour,&min,rest);
+		admode=strchr(rest,',');
+		if(admode)
+		{
+			*admode=0;
+			argv=M5sStrgCut( admode+1, &argc, 1 );
+		}
 		
-	if ( strchr(rest,'p') || strchr(rest,'P'))
-	{
-		if ( hour != 12 )
-			hour+=12;
-	}
-	else if ( strchr(rest,'a') || strchr(rest,'A'))
-	{
-		if ( hour == 12 )
-			hour=0;
-	}
-	tm.tm_sec=0;
-	tm.tm_hour=hour;
-	tm.tm_min=min;
-	next=mktime(&tm);
+		if ( strchr(rest,'p') || strchr(rest,'P'))
+		{
+			if ( hour != 12 )
+				hour+=12;
+		}
+		else if ( strchr(rest,'a') || strchr(rest,'A'))
+		{
+			if ( hour == 12 )
+				hour=0;
+		}
+		tm.tm_sec=0;
+		tm.tm_hour=hour;
+		tm.tm_min=min;
+		next=mktime(&tm);
 
-	if(LogActive(4))
-	{
-		Log(4,"translated timer : %02d:%02d",hour,min);
+		if(LogActive(4))
+		{
+			Log(4,"translated timer : %02d:%02d",hour,min);
+			if (( next < now+1 ) && ( next+60 > now ))
+				Log(4," , arrived - start cleaning now\r\n");
+			else if ( next < now )
+				Log(4," , too late - %s\r\n",p?"check next time":"wait for tomorrow");
+			else
+			{
+				int	diff = next-now;
+				Log(4," , diff = %d secs\r\n",diff);
+			}
+		}
+
 		if (( next < now+1 ) && ( next+60 > now ))
-			Log(4," , arrived - start cleaning now\r\n");
-		else if ( next < now )
-			Log(4," , too late - wait for tomorrow\r\n");
+		{	/* reached */
+			int		i;
+
+			skAddTimer( 1000*62, _checkTimer, 0 );
+			jsonSend( 0 );
+			SndMailAddLog( 0, "TIMER reached (wday=%d, hour=%d, min=%d, next=%d, now=%d)\r\n",tm.tm_wday,hour,min,next,now );
+
+			for( i=0; i<argc; i++ )
+			{
+				if ( !strcasecmp(argv[i],"ZZ") ||
+					!strcasecmp(argv[i],"SB") ||
+					!strcasecmp(argv[i],"SPOT"))
+				{
+					char	cmd[64];
+					Log(4,"switch to mode : %s\r\n",argv[i]);
+					sprintf(cmd,"{\"COMMAND\":{\"CLEAN_MODE\":\"CLEAN_%s\"}}",argv[i]);
+					jsonSend( cmd );
+					jsonSend( 0 );
+					skTimeoutStep(20);
+				}
+			}
+			jsonSend( "{\"COMMAND\":\"CLEAN_START\"}" );
+			skTimeoutStep(20);
+			jsonSend( 0 );
+			jsonSend( "{\"COMMAND\":\"CLEAN_START\"}" );
+			if ( argv )
+				free(argv);
+			return;
+		}
+		if ( next < now )
+		{
+			if ( p )
+			{
+				text=p+1;
+				if ( argv )
+					free(argv);
+				continue;
+			}
+			skAddTimer( 1000*40, _checkTimer, 0 );
+		}
 		else
 		{
 			int	diff = next-now;
-			Log(4," , diff = %d secs\r\n",diff);
+			if ( diff > 40 )
+				diff=40;
+			skAddTimer( diff*1000, _checkTimer, 0 );
 		}
-	}
-
-	if (( next < now+1 ) && ( next+60 > now ))
-	{	/* reached */
-		int		i;
-
-		skAddTimer( 1000*62, _checkTimer, 0 );
-		jsonSend( 0 );
-		SndMailAddLog( 0, "TIMER reached (wday=%d, hour=%d, min=%d, next=%d, now=%d)\r\n",tm.tm_wday,hour,min,next,now );
-
-		for( i=0; i<argc; i++ )
-		{
-			if ( !strcasecmp(argv[i],"ZZ") ||
-				!strcasecmp(argv[i],"SB") ||
-				!strcasecmp(argv[i],"SPOT"))
-			{
-				char	cmd[64];
-				Log(4,"switch to mode : %s\r\n",argv[i]);
-				sprintf(cmd,"{\"COMMAND\":{\"CLEAN_MODE\":\"CLEAN_%s\"}}",argv[i]);
-				jsonSend( cmd );
-				jsonSend( 0 );
-				skTimeoutStep(20);
-			}
-		}
-		jsonSend( "{\"COMMAND\":\"CLEAN_START\"}" );
-		skTimeoutStep(20);
-		jsonSend( 0 );
-		jsonSend( "{\"COMMAND\":\"CLEAN_START\"}" );
 		if ( argv )
 			free(argv);
-		return;
+		break;
 	}
-	if ( next < now )
-		skAddTimer( 1000*40, _checkTimer, 0 );
-	else
-	{
-		int	diff = next-now;
-		if ( diff > 40 )
-			diff=40;
-		skAddTimer( diff*1000, _checkTimer, 0 );
-	}
-	if ( argv )
-		free(argv);
 }
 
 void	StartTimer( void )

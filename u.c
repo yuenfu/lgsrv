@@ -64,12 +64,18 @@
  * 19.05.2015   2.30e  aum fixed bug in http.c introduced in 2.30a
  * 28.05.2015   2.31   aum bumping version, compressed www.c
  * 29.05.2015   2.32   fx2 new VAR  CPU:USAGE  for web-pages  (=100-IDLE)
- * 01.01.2016	2.33   aum fixed 2015 bug in maps.html
+ * 04.08.2015   2.33   fx2 enable core-file in /usr/data/tmp (and use CPU:USAGE)
+ * 01.01.2016   2.33   aum fixed 2015 bug in maps.html
  * 04.01.2016   2.33d  bbb (BigBadaBoom) adds cgi-bin functionality and cleandata.html
  * 10.01.2016   2.34   bbb adds pedro patch support, updates javascripts to prevent overload of lg.srv
+ * 16.08.2016   2.35   fx2 option -core to enable writing core
+ * 17.08.2016   2.36   fx2 allow Smtp-Server like 'mail.abc.de:567#STARTTLS'
+ * 17.08.2016   2.37   fx2 changes popen(dd) to fopen for snapshot
+ * 17.08.2016   2.38   fx2 more than one timer per day (09:00+10:00)
+ * 17.08.2016   2.39   fx2 bugfix: (tueftl,hacking #1445,page73)
 */
 
-char *cstr = "lg.srv, V2.34 compiled 10.01.2016, by BigBadaBoom";
+char *cstr = "lg.srv, V2.39 compiled 17.08.2016, by fx2";
 
 int	debug = 0;		// increasing debug output (0 to 9)
 
@@ -212,9 +218,7 @@ int main( int argc, char ** argv )
 	int		fg=0;
 	char	*cmdname;
 	char	*port	= "6260";
-#if 0
-	int		novideo=1;
-#endif
+	int		enacore=0;
 
 
 	cmdname=strrchr(*argv,'/');
@@ -225,11 +229,6 @@ int main( int argc, char ** argv )
 
 	g_av=argv;
 	g_ac=argc;
-
-	i=0;
-
-	if (( argc>1 ) && !strcmp(argv[1],"-version"))
-		i=1;
 
 	memset( cl_array, 0, sizeof(cl_array) );
 
@@ -251,12 +250,10 @@ int main( int argc, char ** argv )
 		{
 			fg = 1;
 		}
-#if 0
-		else if ( !strcmp(argv[i],"+video") )
+		else if ( !strcmp(argv[i],"-core") )
 		{
-			novideo=0;
+			enacore = 1;
 		}
-#endif
 		else if ( !strcmp(argv[i],"-version") )
 		{
 			printf("%s\n",cstr);
@@ -286,14 +283,16 @@ int main( int argc, char ** argv )
 	ReadMailConfigFromFile();
 	HttpLoadCleaningRecord(0,0);
 
-	system("ifconfig lo up");
+	if ( enacore )
+	{
+		struct rlimit rli;
+		mkdir("/usr/data/tmp",511);	/* 0777 */
+		chdir("/usr/data/tmp");
+		rli.rlim_cur = 16*1048576;	/* 16MB */
+		setrlimit(RLIMIT_CORE,&rli);
+	}
 
-#if 0
-	if ( !novideo )
-		_v4l2_start();
-	else
-		HttpSetNoCam();
-#endif
+	system("ifconfig lo up");
 
 	if ( !fg && fork() )
 		return 0;

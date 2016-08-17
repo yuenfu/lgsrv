@@ -17,7 +17,8 @@ extern	int		debug;
 */
 /* deli = [ \t], also a string can bound into "" or '' */
 /* beautify : remove bounds : ' or " */
-char **M5sStrgCut( char *in, int *rargc, char beautify ) {
+char **M5sStrgCut( char *in, int *rargc, char beautify )
+{
 	char	*argv[ 1024 ];
 	char	**rargv;
 	int		argc=0;

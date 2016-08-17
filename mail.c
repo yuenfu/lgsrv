@@ -21,6 +21,7 @@ extern	JsonVars		json;
 extern	MailVars		mail;
 
 static	unsigned short	slport=0;
+static	unsigned short	starttls=0;
 static	unsigned short	gport=0;
 
 static int _sendMail2Recv( char *subject, char *text, char *receiver )
@@ -43,6 +44,8 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 	SSL_METHOD		*method=0;
 	char			luser[128];
 	char			*auth_user=luser;
+	int				usessl=1;
+	int				usetls=starttls;
 
 	if ( !receiver || !mail.send.gateway ||
 		!mail.send.user || !mail.send.pass )
@@ -70,8 +73,12 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 
 	OpenSSL_add_all_algorithms();
 	if(SSL_library_init() < 0)
+	{
+		Log(2,"sendMail: call SSL_library_init()\r\n");
 		return -2;
+	}
 
+	Log(2,"sendMail: create cts & ssl\r\n");
 	method = SSLv23_client_method();
 	if ( method )
 		ctx = SSL_CTX_new(method);
@@ -93,6 +100,9 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 	if ( !he )
 		return -4;
 
+	if ( usetls )
+		usessl=0;
+
 	ip = malloc(sizeof(struct in_addr));
 	memcpy(ip,he->h_addr,4);
 	fd = socket( AF_INET, SOCK_STREAM, 0 );
@@ -103,6 +113,7 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 	insock.sin_port = htons(slport);
 	memcpy((char*)&insock.sin_addr,(char*)ip,sizeof(struct in_addr));
 
+	Log(2,"sendMail: connect to %s:%ld\r\n",buffer,slport);
 	if( connect(fd, (struct sockaddr*)&insock,
                  sizeof(struct sockaddr_in)) != 0 )
 	{
@@ -110,12 +121,17 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 		return -6;
 	}
 
-	SSL_set_fd(ssl,fd);
-	if ( SSL_connect(ssl)!=1)
+	if ( usessl )
 	{
-		close(fd);
-		return -7;
+		Log(2,"sendMail: setup ssl on connection\r\n");
+		SSL_set_fd(ssl,fd);
+		if ( SSL_connect(ssl)!=1)
+		{
+			close(fd);
+			return -7;
+		}
 	}
+	Log(2,"sendMail: connected\r\n");
 
 	bptr=buffer;
 	while( 1 )
@@ -123,11 +139,15 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 		if ( bptr == buffer )
 			memset(buffer,0,4096);
 
-		x=SSL_read(ssl,bptr,1024);
+		if ( usessl )
+			x=SSL_read(ssl,bptr,1024);
+		else
+			x=read(fd,bptr,1);
 		if ( x < 0 )
 		{
 			close(fd);
-			SSL_free(ssl);
+			if ( usessl )
+				SSL_free(ssl);
 			return state >= 8 ? 0 : -8;
 		}
 
@@ -146,7 +166,8 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 			if ( bptr > buffer+3070 )
 			{
 				close(fd);
-				SSL_free(ssl);
+				if ( usessl )
+					SSL_free(ssl);
 				return state >= 8 ? 0 : -9;
 			}
 
@@ -156,28 +177,86 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 		{
 			Log(2,"sendMail: request not accepted [%d] (%s)\r\n",state,buffer);
 			close(fd);
-			SSL_free(ssl);
+			if ( usessl )
+				SSL_free(ssl);
 			return -10;
 		}
 
 		switch( state )
 		{
 		case 1:
-			if ( *buffer == '2' )	/* 220 */
+			if (( *buffer == '2' )	/* 220 */ ||
+				!strncmp(buffer,"+OK",3) )
 			{
 				if ( use_ehlo )
 					sprintf(buffer,"EHLO %s\r\n",domain);
 				else
 					sprintf(buffer,"HELO %s\r\n",domain);
 
-				SSL_write(ssl,buffer,strlen(buffer));
+				if ( usessl )
+					SSL_write(ssl,buffer,strlen(buffer));
+				else
+					write(fd,buffer,strlen(buffer));
 				state=2;
+				if ( usetls )
+					state=15;
 			}
 			break;
 		case 2 :
 			if ( *buffer == '2' )	/* 250 */
 			{
-				SSL_write(ssl,"AUTH LOGIN\r\n",12);
+/* search auth line */
+				char	authline[512];
+				char	*p=buffer;
+
+				strcpy(authline,"AUTH LOGIN\r\n");
+				while( 1 )
+				{
+					p=strstr(p,"AUTH");
+					if ( !p )
+						break;
+					
+					if ( !strncmp(p-4,"250",3) )
+					{
+						char	*q=strchr(p+4,'\r');
+
+						if ( q )
+							*q=0;
+						q=strchr(p+4,'\n');
+						if ( q )
+							*q=0;
+						q=strstr(p+4,"LOGIN");
+						if ( q )
+							break;
+						q=strstr(p+4,"PLAIN");
+						if ( q )
+						{
+							char	tg[512];
+							char	bs[512];
+							int		usl;
+							sprintf(bs,"%s0%s0%s",
+								auth_user,auth_user,mail.send.pass);
+							usl=strlen(auth_user);
+							bs[usl]=0;
+							bs[2*usl+1]=0;
+							if ( !base64_encode(
+								(unsigned char*)bs,
+								strlen(auth_user)*2+strlen(mail.send.pass)+2,
+								tg,512) )
+							{
+								printf("err:6\n");
+								return -1;
+							}
+							sprintf(authline,"AUTH PLAIN %s\r\n",tg);
+						}
+						break;
+					}
+					p=strchr(p,'\r');
+				}
+				if( usessl )
+					SSL_write(ssl,authline,strlen(authline));
+				else
+					write(fd,authline,strlen(authline));
 				state=3;
 			}
 			break;
@@ -191,7 +270,8 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 				if ( !sz )
 				{
 					close(fd);
-					SSL_free(ssl);
+					if ( ssl )
+						SSL_free(ssl);
 					return -11;
 				}
 				tg[sz]=0;
@@ -200,12 +280,21 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 					if ( !base64_encode((unsigned char*)auth_user, strlen(auth_user), tg, 512) )
 					{
 						close(fd);
-						SSL_free(ssl);
+						if ( ssl )
+							SSL_free(ssl);
 						return -12;
 					}
 
-					SSL_write(ssl,tg,strlen(tg));
-					SSL_write(ssl,"\r\n",2);
+					if ( usessl )
+					{
+						SSL_write(ssl,tg,strlen(tg));
+						SSL_write(ssl,"\r\n",2);
+					}
+					else
+					{
+						write(fd,tg,strlen(tg));
+						write(fd,"\r\n",2);
+					}
 					break;
 				}
 				else if ( !strcasecmp("Password:",tg) )
@@ -213,12 +302,21 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 					if ( !base64_encode((unsigned char*)mail.send.pass, strlen(mail.send.pass), tg, 512) )
 					{
 						close(fd);
-						SSL_free(ssl);
+						if ( ssl )
+							SSL_free(ssl);
 						return -13;
 					}
 
-					SSL_write(ssl,tg,strlen(tg));
-					SSL_write(ssl,"\r\n",2);
+					if ( usessl )
+					{
+						SSL_write(ssl,tg,strlen(tg));
+						SSL_write(ssl,"\r\n",2);
+					}
+					else
+					{
+						write(fd,tg,strlen(tg));
+						write(fd,"\r\n",2);
+					}
 					break;
 				}
 				else
@@ -229,14 +327,18 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 			else if ( *buffer == '2' )	/* 250 */
 			{
 				sprintf(buffer,"MAIL FROM:<%s>\r\n",luser);
-				SSL_write(ssl,buffer,strlen(buffer));
+				if( usessl )
+					SSL_write(ssl,buffer,strlen(buffer));
+				else
+					write(fd,buffer,strlen(buffer));
 				state=4;
 			}
 			else
 			{
 				Log(2,"sendMail: unknown auth-response :%s\r\n",buffer);
 				close(fd);
-				SSL_free(ssl);
+				if(ssl)
+					SSL_free(ssl);
 				return -14;
 			}
 			break;
@@ -244,14 +346,20 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 			if ( *buffer == '2' )	/* 250 */
 			{
 				sprintf(buffer,"RCPT TO:<%s>\r\n",receiver);
-				SSL_write(ssl,buffer,strlen(buffer));
+				if(usessl)
+					SSL_write(ssl,buffer,strlen(buffer));
+				else
+					write(fd,buffer,strlen(buffer));
 				state=5;
 			}
 			break;
 		case 5 :
 			if ( *buffer == '2' )	/* 250 */
 			{
-				SSL_write(ssl,"DATA\r\n",6);
+				if(usessl)
+					SSL_write(ssl,"DATA\r\n",6);
+				else
+					write(fd,"DATA\r\n",6);
 				state=7;
 			}
 			break;
@@ -262,24 +370,75 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 
 				sprintf(buffer,"From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n",
 					luser,receiver,subject);
-				SSL_write(ssl,buffer,strlen(buffer));
+				if(usessl)
+					SSL_write(ssl,buffer,strlen(buffer));
+				else
+					write(fd,buffer,strlen(buffer));
 				len=strlen(text);
-				SSL_write(ssl,text,len);
-				SSL_write(ssl,"\r\n.\r\n",5);
+				if(usessl)
+				{
+					SSL_write(ssl,text,len);
+					SSL_write(ssl,"\r\n.\r\n",5);
+				}
+				else
+				{
+					write(fd,text,len);
+					write(fd,"\r\n.\r\n",5);
+				}
 				state=8;
 			}
 			break;
 		case 8 :
 			if ( *buffer == '2' )	/* 250 */
 			{
-				SSL_write(ssl,"QUIT\r\n",6);
+				if(usessl)
+					SSL_write(ssl,"QUIT\r\n",6);
+				else
+					write(fd,"QUIT\r\n",6);
 				state=9;
 			}
 			break;
 		case 9 :
-			SSL_free(ssl);
+			if(ssl)
+				SSL_free(ssl);
 			close(fd);
 			return 0;
+/* hole */
+		case 15 :	/* STARTTLS */
+			if ( !strstr(buffer,"250-STARTTLS") &&
+				!strstr(buffer,"250 STARTTLS"))
+			{
+				Log(2,"sendMail: STARTTLS not in EHLO answer:\r\n%s",buffer);
+				close(fd);
+				if(ssl)
+					SSL_free(ssl);
+				return -15;
+			}
+			write(fd,"STARTTLS\r\n",10);
+			state=16;
+			break;
+		case 16 :
+			if ( *buffer == '2' )   /* 220 / 250 */
+			{
+				SSL_set_fd(ssl,fd);
+				if ( SSL_connect(ssl)!=1)
+				{
+				}
+				if ( use_ehlo )
+					sprintf(buffer,"EHLO %s\r\n",domain);
+				else
+					sprintf(buffer,"HELO %s\r\n",domain);
+				SSL_write(ssl,buffer,strlen(buffer));
+				state=2;
+				usetls=0;
+				usessl=1;
+				break;
+			}
+			Log(2,"sendMail: STARTTLS not accepted:\r\n%s",buffer);
+			close(fd);
+			if(ssl)
+				SSL_free(ssl);
+			return -16;
 		}
 	}
 	return( 0 );
@@ -901,6 +1060,13 @@ void	ReadMailConfigFromFile( void )
 		char *p=strchr(mail.send.gateway,':');
 		if ( p )
 		{
+			char *addp=strchr(p,'#');
+			if ( addp )
+			{
+				*addp=0;
+				if ( !strncasecmp(addp+1,"STARTTLS",9) )
+					starttls=1;
+			}
 			slport=atoi(p+1);
 		}
 	}
@@ -1016,6 +1182,13 @@ void RunMailCfgParam( char *param)
 		char *p=strchr(mail.send.gateway,':');
 		if ( p )
 		{
+			char *addp=strchr(p,'#');
+			if ( addp )
+			{
+				*addp=0;
+				if ( !strncasecmp(addp+1,"STARTTLS",9) )
+					starttls=1;
+			}
 			slport=atoi(p+1);
 		}
 	}

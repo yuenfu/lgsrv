@@ -26,7 +26,7 @@ a.web {
 	text-decoration: underline;
 }
 
-/* -- Grundgerüst ------------------------------------------------------------------------------ */
+/* -- Grundgerï¿½st ------------------------------------------------------------------------------ */
 
 #container {
 	width: 1000px;
@@ -391,4 +391,10 @@ input[type="text"] {
 	-webkit-border-radius: 2px;
 	-moz-border-radius: 2px;
 	border-radius: 2px;
+}
+
+#cam {
+	float:	right;
+	background-color: #D1D2D4;
+	margin-bottom: 10px;
 }
