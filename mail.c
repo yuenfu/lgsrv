@@ -423,6 +423,10 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 				SSL_set_fd(ssl,fd);
 				if ( SSL_connect(ssl)!=1)
 				{
+					close(fd);
+					if(ssl)
+						SSL_free(ssl);
+					return -7;
 				}
 				if ( use_ehlo )
 					sprintf(buffer,"EHLO %s\r\n",domain);

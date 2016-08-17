@@ -8,6 +8,7 @@
 
 extern  char		    *cstr;
 extern	int				debug;
+extern	int				vmeth;
 extern	JsonVars		json;
 extern	TimerVars		timer;
 extern	MailVars		mail;
@@ -310,6 +311,7 @@ static	float		cpu_idle=0;
 static	float		cpu_user=0;
 static	float		cpu_sys=0;
 static	float		cpu_nice=0;
+static	float		mem_usage=0;
 static	float		sum_cmd_per_sec=0;
 static	struct tm	tm;
 
@@ -370,6 +372,8 @@ static	void	PrepareVars( void )
 	cpu_user = (float)a_user/100;
 	cpu_sys = (float)a_sys/100;
 	cpu_nice = (float)a_nice/100;
+
+	mem_usage = _GetMemUsage();
 
 	skTimeoutStep(10);
 }
@@ -919,6 +923,8 @@ static	char	retbuf[512];
 		sprintf(retbuf,"%f",sum_cmd_per_sec);
 	else if ( (sz == 13) && !strncmp(code,"LGSRV:NUMHTTP",sz) )
 		sprintf(retbuf,"%d",http_requests);
+	else if ( (sz == 14) && !strncmp(code,"LGSRV:MEMUSAGE",sz) )
+		sprintf(retbuf,"%.3f MB",mem_usage);
 	else if ( (sz == 13) && !strncmp(code,"SYS:DROPBEARV",sz) )
 		sprintf(retbuf,"%s",*dropb_version!='#' ? dropb_version:"-?-");
 	else if ( (sz == 12) && !strncmp(code,"TIMER:MONDAY",sz) )
@@ -1772,20 +1778,19 @@ static		int		cur_mode=-1;
 	{
 		char		buff[5008];
 		int			x=0;
+		int			xb;
+		int			xsum=0;
+		int			maxb=153600;
 		FILE		*fp=0;
 		
 		// Write header
 		WriteSimpleHttp( l, hdr_pedro );
 		
 		skMultiDisable(l,0);
-	
+
 		// Execute command
-//		sprintf(buff,"dd if=/dev/camclone bs=153600 count=1 2>/dev/null");
-//		fp=popen(buff,"r");
-		fp=fopen("/dev/camclone","r");
-		int		xb;
-		int		xsum=0;
-		int		maxb=153600;
+		sprintf(buff,"dd if=/dev/camclone bs=153600 count=1 2>/dev/null");
+		fp=popen(buff,"r");
 		if ( fp )
 		{
 			xb=fread(buff,1,5000,fp);
@@ -1795,20 +1800,21 @@ static		int		cur_mode=-1;
 				x=xb;
 				_WritePacket(l,(unsigned char*)buff,x);
 				xsum+=x;
-				if ( l->out && ( l->out->fill - l->out->ptr > 100000 ))
+				if ( l->out && ( l->out->fill - l->out->ptr > 200000 ))
 					_SyncLine(l);
 				if (( xb < 5000 ) || !maxb )
 					break;
 				xb=fread(buff,1,maxb>5000?5000:maxb,fp);
 			}
-	//		pclose(fp);
-			fclose(fp);
+			pclose(fp);
 		}
-		skCloseAtEmpty(l);
-		Log(8,"%p pedro yuv image: %d bytes written\r\n",l,xsum);
 
 		_SyncLine(l);
 		skMultiEnable(l,0);
+
+		skCloseAtEmpty(l);
+
+		Log(8,"%p pedro yuv image: %d bytes written\r\n",l,xsum);
 
 		return;
 	}

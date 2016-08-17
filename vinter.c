@@ -144,7 +144,7 @@ void  DoLogData( SkLine *l, char *data, int len )
 		_WriteString(l,"version          : show lg.srv version\r\n");
 		_WriteString(l,"state            : show state of lg.srv\r\n");
 		_WriteString(l,"quit | exit      : hangup this connection\r\n");
-		_WriteString(l,"log <mask>       : toggle logging of mask(4=timer,8=http,16=mail)\r\n");
+		_WriteString(l,"log <mask>       : toggle logging of mask(2=mail,4=timer,8=http,16=json)\r\n");
 		_WriteString(l,"maxlog <num>     : set more bytes to log\r\n");
 	}
 	else if ( (argc>1) && !strcmp(argv[0],"log") )
@@ -155,6 +155,10 @@ void  DoLogData( SkLine *l, char *data, int len )
 			mask=4;
 		else if ( !strcmp(argv[1],"http") )
 			mask=8;
+		else if ( !strcmp(argv[1],"json") )
+			mask=16;
+		else if ( !strcmp(argv[1],"mail") )
+			mask=2;
 		l->data->active_log ^= mask;
 		if ( l->data->active_log )
 			sprintf(buff,"log on : mask=0x%02x\r\n",l->data->active_log);

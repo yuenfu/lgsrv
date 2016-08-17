@@ -73,11 +73,15 @@
  * 17.08.2016   2.37   fx2 changes popen(dd) to fopen for snapshot
  * 17.08.2016   2.38   fx2 more than one timer per day (09:00+10:00)
  * 17.08.2016   2.39   fx2 bugfix: (tueftl,hacking #1445,page73)
+ * 17.08.2016   2.39b  fx2 -mp (test only)
+ * 17.08.2016   2.40   fx2 back to popen, access device will crash lg.srv
+ * 17.08.2016   2.41   fx2 new field MEMORY USAGE in statistic and status page
 */
 
-char *cstr = "lg.srv, V2.39 compiled 17.08.2016, by fx2";
+char *cstr = "lg.srv, V2.41 compiled 17.08.2016, by fx2";
 
 int	debug = 0;		// increasing debug output (0 to 9)
+int		vmeth=0;
 
 static	SkLine	*listen_line=0;
 static	SkLine	*cl_array[30];
@@ -155,11 +159,11 @@ static	void	_clientData( SkLine *l, int pt, void *own, void *sys )
 
 	HttpStatAddClData();
 
-	Log(2,"_clientData: %d bytes (%d)\r\n",pck->len,l->data->cl_id);
+	Log(8,"_clientData: %d bytes (%d)\r\n",pck->len,l->data->cl_id);
 
 	if ( pck->len > 20000 )
 	{
-		Log(2," # request too long ! - ignoring (wait for fault)\r\n");
+		Log(8," # request too long ! - ignoring (wait for fault)\r\n");
 		noWrongSize++;
 		skDisconnect( l );
 		return;
@@ -168,10 +172,10 @@ static	void	_clientData( SkLine *l, int pt, void *own, void *sys )
 	for( i=0; i<pck->len && (i<maxlog); i++ )
 	{
 		if ( !(i%16) && i )
-			Log(2,"\r\n");
-		Log(2,"%02x ",data[i]);
+			Log(8,"\r\n");
+		Log(8,"%02x ",data[i]);
 	}
-	Log(2,"\r\n");
+	Log(8,"\r\n");
 
 	l->data->num_wrong_frames++;
 	return;
@@ -208,6 +212,13 @@ void	_clientConnected( SkLine *cl, int pt, void *own, void *sys )
 
 static	char	**g_av=0;
 static	int		g_ac=0;
+static  char	*mem_a=0;
+
+float _GetMemUsage( void )
+{
+	char *mem_b = sbrk(0);
+	return (float)(mem_b - mem_a)/1024/1024;
+}
 
 /*
  * ------------------------------------------------------------------------
@@ -220,6 +231,7 @@ int main( int argc, char ** argv )
 	char	*port	= "6260";
 	int		enacore=0;
 
+	mem_a=sbrk(0);
 
 	cmdname=strrchr(*argv,'/');
 	if ( cmdname )
@@ -249,6 +261,10 @@ int main( int argc, char ** argv )
 		else if ( !strcmp(argv[i],"-fg") )
 		{
 			fg = 1;
+		}
+		else if ( !strcmp(argv[i],"-mp") )
+		{
+			vmeth = 1;
 		}
 		else if ( !strcmp(argv[i],"-core") )
 		{

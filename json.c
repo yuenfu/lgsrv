@@ -66,19 +66,22 @@ static	void	_clientClose( SkLine *l, int pt, void *own, void *sys )
 {
 	cmd_line=0;
 
+	Log(16,"json: cmdline disconnected\r\n");
+
 	if ( l->data )
 	{
 		*(l->data->f1) = 0;	/* mark for loop */
 		free( l->data );
 		l->data=0;
 	}
-	skAddTimer(1,_timedJsonConnect,0);
+	skAddTimer(100,_timedJsonConnect,0);
 }
 
 static	void	_sessionClose( SkLine *l, int pt, void *own, void *sys )
 {
 	session_line=0;
 
+	Log(16,"json: session disconnected\r\n");
 }
 
 static	int	GetJson( char *in, char **dest, char *property )
@@ -111,6 +114,8 @@ static	void	_clientData( SkLine *l, int pt, void *own, void *sys )
 	short			len;
 	int				i=0;
 	char			*session=0;
+
+	Log(16,"json: cmdline Data received\r\n");
 
 	while( size > 12 )
 	{
@@ -176,6 +181,7 @@ static void _sessionAlive( SkTimerType tid, void *own )
 	if ( !cmd_line )
 		return;
 
+	Log(16,"json: send ALIVE\r\n");
 	sendJSONPacket(cmd_line, "{\"SESSION\":\"ALIVE\"}" );
 
 	stid=skAddTimer(2000, _sessionAlive, 0 );
@@ -190,6 +196,7 @@ static	void	_sessionData( SkLine *l, int pt, void *own, void *sys )
 	int				i=0;
 	int				disco=0;
 
+	Log(16,"json: session Data received '%s'\r\n",len>12?data+12:"....");
 	while( size > 12 )
 	{
 		memcpy(&len,data+8,2);
@@ -202,7 +209,7 @@ static	void	_sessionData( SkLine *l, int pt, void *own, void *sys )
 //		if ( !strstr(data+12,"ENABLE") )
 //		{
 //			sendJSONPacket(session_line, "{\"COMMAND\":\"DISCONNECT\"}" );
-			disco=1;
+//			disco=1;
 //		}
 
 		data += len+12;
@@ -243,6 +250,7 @@ static SkLine	*RawConnect( char *service, char *host )
 {
 	SkLine *l[2]={0,0};
 
+	Log(16,"json: connect '%s:%s'\r\n",host,service);
 	skAsyConnect( host, service, 500, _asyConn, l );
 
 	while( l[0] == 0 )
@@ -291,6 +299,8 @@ static void _establish4002( void )
 	skAddHandler( l, SK_H_CLOSE, _sessionClose, 0 );
 
 	sendJSONPacket(l, "{\"CONNECT\":\"REQUEST\"}" );
+
+	Log(16,"json: session connected\r\n");
 }
 
 int	jsonSend( char *command )
@@ -331,6 +341,7 @@ int	jsonSend( char *command )
 
 		l->data = malloc(sizeof(JsonData));
 		l->data->f1 = &f1;
+		Log(16,"json: cmdline connected\r\n");
 	}
 
 	if ( clen )
