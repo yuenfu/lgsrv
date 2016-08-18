@@ -81,6 +81,7 @@ extern	void	_ShowStatistic( SkLine *l, int ashtml );
 extern	void    _ResetStatistik( void );
 extern	void	SetMaxLog( int nr );
 extern	void	_RestartMe( void );
+extern	float	_GetMemUsage( void );
 
 /* listen.c */
 extern	SkLine	*_lgListen( unsigned short port );

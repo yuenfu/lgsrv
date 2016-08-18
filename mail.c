@@ -1062,12 +1062,12 @@ void	ReadMailConfigFromFile( void )
 	if ( mail.send.gateway )
 	{
 		char *p=strchr(mail.send.gateway,':');
+		starttls=0;
 		if ( p )
 		{
 			char *addp=strchr(p,'#');
 			if ( addp )
 			{
-				*addp=0;
 				if ( !strncasecmp(addp+1,"STARTTLS",9) )
 					starttls=1;
 			}
@@ -1184,12 +1184,12 @@ void RunMailCfgParam( char *param)
 	if ( mail.send.gateway )
 	{
 		char *p=strchr(mail.send.gateway,':');
+		starttls=0;
 		if ( p )
 		{
 			char *addp=strchr(p,'#');
 			if ( addp )
 			{
-				*addp=0;
 				if ( !strncasecmp(addp+1,"STARTTLS",9) )
 					starttls=1;
 			}

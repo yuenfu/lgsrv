@@ -76,9 +76,10 @@
  * 17.08.2016   2.39b  fx2 -mp (test only)
  * 17.08.2016   2.40   fx2 back to popen, access device will crash lg.srv
  * 17.08.2016   2.41   fx2 new field MEMORY USAGE in statistic and status page
+ * 18.08.2016   2.42   fx2 make possible to save #STARTTLS (bugfix)
 */
 
-char *cstr = "lg.srv, V2.41 compiled 17.08.2016, by fx2";
+char *cstr = "lg.srv, V2.42 compiled 18.08.2016, by fx2";
 
 int	debug = 0;		// increasing debug output (0 to 9)
 int		vmeth=0;
