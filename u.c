@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
 
 #include "NetDrv.h"
 
@@ -77,9 +79,10 @@
  * 17.08.2016   2.40   fx2 back to popen, access device will crash lg.srv
  * 17.08.2016   2.41   fx2 new field MEMORY USAGE in statistic and status page
  * 18.08.2016   2.42   fx2 make possible to save #STARTTLS (bugfix)
+ * 19.08.2016   2.43   fx2 self restart on crash
 */
 
-char *cstr = "lg.srv, V2.42 compiled 18.08.2016, by fx2";
+char *cstr = "lg.srv, V2.43 compiled 19.08.2016, by fx2";
 
 int	debug = 0;		// increasing debug output (0 to 9)
 int		vmeth=0;
@@ -221,16 +224,85 @@ float _GetMemUsage( void )
 	return (float)(mem_b - mem_a)/1024/1024;
 }
 
-/*
- * ------------------------------------------------------------------------
- */
+static pid_t		pid=0;
+
+static void _stop( int snr )
+{
+	if( pid )
+		kill(pid,SIGTERM);
+	exit(0);
+}
+
+static void	_StartChild( void );
+
+static void _sigchld_( int snr )
+{
+	pid_t	wpid;
+	int		st;
+
+	while( ( wpid = waitpid(-1, &st, WNOHANG) ) != 0 )
+	{
+		if ( wpid == pid )
+		{
+			pid = 0;
+			_StartChild();
+			break;
+		}
+	}
+}
+
+static	char	*defport="6260";
+static	char	*port=0;
+static	int		enacore=0;
+
+static void	_StartChild( void )
+{
+	sigset_t			nmask, omask;
+	struct sigaction	sa;
+
+	sa.sa_handler = _sigchld_;
+	sa.sa_flags = SA_RESTART;
+	sigaction(SIGCHLD,&sa,NULL);
+
+	sigemptyset(&nmask);
+	sigaddset(&nmask,SIGCHLD);
+	sigprocmask(SIG_BLOCK,&nmask,&omask);
+
+	pid = fork();
+	if ( pid == -1 )
+	{
+		fprintf(stderr,"no more porcesses\n");
+		exit(127);
+	}
+	if ( !pid )	/* child */
+	{
+		char	*av[]={ 0, "-fg", 0, 0, 0, 0, 0 };
+		int		dpa=2;
+
+		av[0]=*g_av;
+		if ( port != defport )
+		{
+			*(av+dpa) = "-port";
+			*(av+dpa+1) = port;
+			dpa+=2;
+		}
+		if ( enacore )
+		{
+			*(av+dpa) = "-core";
+			dpa++;
+		}
+		execvp( *g_av, av );
+		perror( *g_av );
+		_exit(127);
+	}
+	sigprocmask(SIG_SETMASK,&omask,NULL);
+}
+
 int main( int argc, char ** argv )
 {
 	int		i;
 	int		fg=0;
 	char	*cmdname;
-	char	*port	= "6260";
-	int		enacore=0;
 
 	mem_a=sbrk(0);
 
@@ -249,7 +321,7 @@ int main( int argc, char ** argv )
 	{
 		if ( (i<argc-1) && !strcmp(argv[i],"-port") )
 		{
-			port = strdup(argv[++i]);
+			port = argv[++i];
 		}
 		else if ( !strcmp(argv[i],"-debug") )
 		{
@@ -262,10 +334,6 @@ int main( int argc, char ** argv )
 		else if ( !strcmp(argv[i],"-fg") )
 		{
 			fg = 1;
-		}
-		else if ( !strcmp(argv[i],"-mp") )
-		{
-			vmeth = 1;
 		}
 		else if ( !strcmp(argv[i],"-core") )
 		{
@@ -288,9 +356,26 @@ int main( int argc, char ** argv )
 		}
 	}
 
+	if ( debug )
+		fg=1;
+	if ( !port )
+		port=defport;
+
+	if ( !fg && fork() )
+		return 0;
+
 	signal( SIGCHLD, SIG_IGN );
 	signal( SIGPIPE, SIG_IGN );
 	signal( SIGHUP, SIG_IGN );
+	signal( SIGINT, _stop );
+	signal( SIGTERM, _stop );
+
+	if ( !fg )
+	{
+		_StartChild();
+		skMainLoop();
+		return 0;
+	}
 
 	memset(&json,0,sizeof(JsonVars));
 	memset(&timer,0,sizeof(TimerVars));
@@ -310,9 +395,6 @@ int main( int argc, char ** argv )
 	}
 
 	system("ifconfig lo up");
-
-	if ( !fg && fork() )
-		return 0;
 
 	listen_line = _lgListen( atol(port) );
 
@@ -390,16 +472,16 @@ void	_ResetStatistik( void )
 
 void	_RestartMe( void )
 {
-	unsigned short	port=0;
+	unsigned short	portnr=0;
 
 	if ( listen_line )
 	{
-		port=listen_line->port;
+		portnr=listen_line->port;
 		skDisconnect( listen_line );
 	}
 	listen_line=0;
 
 	execvp( "/usr/bin/lg.srv", g_av );
 
-	listen_line = _lgListen( port ? port : 6260 );
+	listen_line = _lgListen( portnr ? portnr : 6260 );
 }
