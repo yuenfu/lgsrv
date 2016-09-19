@@ -80,9 +80,10 @@
  * 17.08.2016   2.41   fx2 new field MEMORY USAGE in statistic and status page
  * 18.08.2016   2.42   fx2 make possible to save #STARTTLS (bugfix)
  * 19.08.2016   2.43   fx2 self restart on crash
+ * 19.09.2016   2.44   fx2 allow '&' in mail-config
 */
 
-char *cstr = "lg.srv, V2.43 compiled 19.08.2016, by fx2";
+char *cstr = "lg.srv, V2.44 compiled 19.09.2016, by fx2";
 
 int	debug = 0;		// increasing debug output (0 to 9)
 int		vmeth=0;

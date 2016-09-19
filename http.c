@@ -1762,6 +1762,11 @@ static		int		cur_mode=-1;
 			}
 			memcpy(hx,p+1,2);
 			hx[2]=0;
+			if ( !strcmp(hx,"26") )	/* do not convert & */
+			{
+				*q=*p;
+				continue;
+			}
 			sscanf(hx,"%x",&b);
 			*q=b;
 			p+=2;

@@ -1092,6 +1092,22 @@ void	ReadMailConfigFromFile( void )
 	}
 }
 
+static void _Cnv26( char *in )
+{
+	char	*p;
+	int		l;
+
+	p=strstr(in, "%26" );
+
+	while( p )
+	{
+		l=strlen(p);
+		memmove(p+1,p+3,l-2);	/* inkl. 0 */
+		*p='&';
+		p=strstr(in, "%26" );
+	}
+}
+
 void RunMailCfgParam( char *param)
 {
 	char	*p, *p2;
@@ -1128,6 +1144,7 @@ void RunMailCfgParam( char *param)
 		p=strchr(pin,'&');
 		if ( p )
 			*p=0;
+		_Cnv26(pin);
 		p2=strchr(pin,'=');
 		if ( !p2 )
 		{
