@@ -56,6 +56,10 @@ typedef struct _ClientData
 #define	MODE_HTTP		1
 #define	MODE_LOG		3
 
+#ifndef BINPATH
+#define BINPATH "/usr/bin"
+#endif
+
 /* vinter.c */
 extern	char **M5sStrgCut( char *in, int *rargc, char beautify );
 #ifdef NOINTERFACES

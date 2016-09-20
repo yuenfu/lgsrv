@@ -482,7 +482,7 @@ void	_RestartMe( void )
 	}
 	listen_line=0;
 
-	execvp( "/usr/bin/lg.srv", g_av );
+	execvp( BINPATH"/lg.srv", g_av );
 
 	listen_line = _lgListen( portnr ? portnr : 6260 );
 }

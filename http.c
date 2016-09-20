@@ -532,20 +532,20 @@ static	int	DoActivate( SkLine *l, char *param )
 
 	if ( strstr(param,"lg.srv") )
 	{
-		char	*to="/usr/bin/lg.srv";
-		rename(to,"/usr/bin/lg.srv.svd");
+		char	*to=BINPATH"/lg.srv";
+		rename(to,BINPATH"/lg.srv.svd");
 		if ( movefile( from, to ) )
 			failed++;
 		else if ( chmod( to, 0755 ) )
 			failed++;
 		if ( failed )
 		{
-			rename("/usr/bin/lg.srv.svd",to);
+			rename(BINPATH"/lg.srv.svd",to);
 			unlink(from);
 		}
 		else
 		{
-			unlink("/usr/bin/lg.srv.svd");
+			unlink(BINPATH"/lg.srv.svd");
 			rc=1;
 		}
 	}
