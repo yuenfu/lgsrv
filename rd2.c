@@ -142,5 +142,19 @@ void _HReadable( SkLine *l, int pt, void *own, void *sys )
 		return;
 	}
 
+	if ( l->in->fill - l->in->ptr > SK_CACHE_SIZE )
+	{
+		l->in->last_realloc=time(0);
+	}
+	else if (( l->in->size > SK_CACHE_SIZE ) && (l->in->last_realloc+10 < time(0)))
+	{
+		char	*nc = realloc( l->in->cache, SK_CACHE_SIZE );
+		if ( nc )
+		{
+			l->in->cache = nc;
+			l->in->size = SK_CACHE_SIZE;
+		}
+	}
+
 	_LookPackets( l );
 }

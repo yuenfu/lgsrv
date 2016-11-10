@@ -278,7 +278,6 @@ static	void	_checkTimer( SkTimerType tid, void *own )
 			int		i;
 
 			skAddTimer( 1000*62, _checkTimer, 0 );
-			jsonSend( 0 );
 			SndMailAddLog( 0, "TIMER reached (wday=%d, hour=%d, min=%d, next=%d, now=%d)\r\n",tm.tm_wday,hour,min,next,now );
 
 			for( i=0; i<argc; i++ )
@@ -291,13 +290,9 @@ static	void	_checkTimer( SkTimerType tid, void *own )
 					Log(4,"switch to mode : %s\r\n",argv[i]);
 					sprintf(cmd,"{\"COMMAND\":{\"CLEAN_MODE\":\"CLEAN_%s\"}}",argv[i]);
 					jsonSend( cmd );
-					jsonSend( 0 );
 					skTimeoutStep(20);
 				}
 			}
-			jsonSend( "{\"COMMAND\":\"CLEAN_START\"}" );
-			skTimeoutStep(20);
-			jsonSend( 0 );
 			jsonSend( "{\"COMMAND\":\"CLEAN_START\"}" );
 			if ( argv )
 				free(argv);

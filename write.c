@@ -198,6 +198,21 @@ fprintf(stderr,"blocked write of %d bytes\n",cnt - max2);
 		l->out->fill += cnt;
 	}
 
+	if ( l->out->fill - l->out->ptr > SK_CACHE_SIZE )
+	{
+		l->out->last_realloc=time(0);
+	}
+	else if (( l->out->size > SK_CACHE_SIZE ) && (l->out->last_realloc+10 < time(0)))
+	{
+		char	*nc;
+		nc = realloc( l->out->cache, SK_CACHE_SIZE );
+		if ( nc )
+		{
+			l->out->cache = nc;
+			l->out->size = SK_CACHE_SIZE;
+		}
+	}
+
 	x = __Sk_rwrite( l, 0 );	/* unblocked write */
 	if ( x == -1 )
 	{

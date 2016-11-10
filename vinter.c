@@ -114,7 +114,9 @@ void  DoLogData( SkLine *l, char *data, int len )
 	char	*cmd_copy=0;
 	char	buffer[ 1024 ];
 
-	cmd_copy=strdup(data);
+	cmd_copy=malloc(len+1);
+	memcpy(cmd_copy,data,len);
+	cmd_copy[len]=0;
 
 	argv=M5sStrgCut( cmd_copy, &argc, 1 );
 
@@ -133,16 +135,10 @@ void  DoLogData( SkLine *l, char *data, int len )
 		_WriteString(l,buffer);
 
 	}
-	else if ( !strcmp(argv[0],"state") )
-	{
-		_WriteString(l,"*state of lg.srv*\r\n" );
-		_ShowStatistic(l,0);
-	}
 	else if ( !strcmp(argv[0],"help") )
 	{
 		_WriteString(l,"*command list*\r\n" );
 		_WriteString(l,"version          : show lg.srv version\r\n");
-		_WriteString(l,"state            : show state of lg.srv\r\n");
 		_WriteString(l,"quit | exit      : hangup this connection\r\n");
 		_WriteString(l,"log <mask>       : toggle logging of mask(2=mail,4=timer,8=http,16=json)\r\n");
 		_WriteString(l,"maxlog <num>     : set more bytes to log\r\n");

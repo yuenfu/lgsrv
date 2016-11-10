@@ -19,6 +19,12 @@
 #include <linux/if_ether.h>
 #include <time.h>
 
+#ifdef MEM_CHECK
+#include <fk/mchk.h>
+#else
+#include <malloc.h>
+#endif
+
 #define ETH_H_PACKET	SK_H_USER1
 
 typedef struct _EthPacket
@@ -32,7 +38,6 @@ typedef struct _EthPacket
 
 typedef struct _ClientData
 {
-	int				cl_id;
 	int				modify_state;
 	int				mode;
 	int				active_log;
@@ -137,11 +142,13 @@ typedef struct _JsonVars
 	char	*nickname;
 	char	*version;
 	char	*battperc;
+	int		conntime;
 } JsonVars;
 
-extern	int	jsonSend( char *command );
+extern	int		jsonSend( char *command );
+extern	void	jsonInit( void );
 
-/* json.c */
+/* timer.c */
 typedef struct _TimerVars
 {
 	char	*mon;

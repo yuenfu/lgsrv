@@ -2,7 +2,11 @@
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
+#ifdef MEM_CHECK
+#include <fk/mchk.h>
+#else
 #include <malloc.h>
+#endif
 
 /**
  * characters used for Base64 encoding

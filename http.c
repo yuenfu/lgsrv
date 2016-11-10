@@ -323,7 +323,6 @@ static	void	PrepareVars( void )
 
 	gettimeofday(&tv,0);
 
-	jsonSend(0);
 	localtime_r(&tv.tv_sec,&tm);
 
 	sum_cmd_per_sec = 0;
@@ -888,11 +887,18 @@ static	void	FillCleaningVar( char* to, char *code, int sz)
 static	char	*GetVar( char *code, int sz )
 {
 static	char	retbuf[512];
+static  pid_t   mypid=0;
+
+	if ( !mypid )
+		mypid=getpid();
+
 	*retbuf=0;
 	if ( (sz == 12) && !strncmp(code,"JSON:VERSION",sz) )
 		sprintf(retbuf,"%s",json.version?json.version:"");
 	else if ( (sz == 16) && !strncmp(code,"JSON:ROBOT_STATE",sz) )
 		sprintf(retbuf,"%s",json.robot_state?json.robot_state:"");
+	else if ( (sz == 13) && !strncmp(code,"JSON:CONNTIME",sz) )
+		sprintf(retbuf,"%d",json.conntime);
 	else if ( (sz == 10) && !strncmp(code,"JSON:TURBO",sz) )
 		sprintf(retbuf,"%s",json.turbo?json.turbo:"");
 	else if ( (sz == 11) && !strncmp(code,"JSON:REPEAT",sz) )
@@ -925,6 +931,8 @@ static	char	retbuf[512];
 		sprintf(retbuf,"%d",http_requests);
 	else if ( (sz == 14) && !strncmp(code,"LGSRV:MEMUSAGE",sz) )
 		sprintf(retbuf,"%.3f MB",mem_usage);
+	else if ( (sz == 9) && !strncmp(code,"LGSRV:PID",sz) )
+		sprintf(retbuf,"%d",mypid);
 	else if ( (sz == 13) && !strncmp(code,"SYS:DROPBEARV",sz) )
 		sprintf(retbuf,"%s",*dropb_version!='#' ? dropb_version:"-?-");
 	else if ( (sz == 12) && !strncmp(code,"TIMER:MONDAY",sz) )
@@ -1502,9 +1510,11 @@ void	HttpPck( SkLine *l, int pt, void *own, void *sys )
 
 	http_requests++;
 
-	if ( debug&8 )
+
+	if ( !strncmp(data,"GET ",4) )
 	{
-		if ( !strncmp(data,"GET ",4) )
+		data[ pck->len - 1 ] = 0; /* somewhere within \r\n\r\n ... */
+		if ( debug&8 )
 		{
 			char  txt[512];
 			char *p=strstr(data," HTTP");

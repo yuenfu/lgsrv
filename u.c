@@ -81,18 +81,23 @@
  * 18.08.2016   2.42   fx2 make possible to save #STARTTLS (bugfix)
  * 19.08.2016   2.43   fx2 self restart on crash
  * 19.09.2016   2.44   fx2 allow '&' in mail-config
+ * 09.11.2016   2.45   fx2 do not hash line-recs, shrink line-cache
+ * 10.11.2016   2.46   fx2 new json interface + var "JSON:CONNTIME","LGSRV:PID"
 */
 
-char *cstr = "lg.srv, V2.44 compiled 19.09.2016, by fx2";
+char *cstr = "lg.srv, V2.46 compiled 10.11.2016, by fx2";
 
 int	debug = 0;		// increasing debug output (0 to 9)
 int		vmeth=0;
 
 static	SkLine	*listen_line=0;
+#if 0
 static	SkLine	*cl_array[30];
+#endif
 
 static	int		noWrongSize=0;
 static	int		maxlog=48;
+static	int		numcl=0;
 
 	JsonVars	json;
 	TimerVars	timer;
@@ -105,19 +110,12 @@ void	SetMaxLog( int nr )
 
 static	void	_clientClose( SkLine *l, int pt, void *own, void *sys )
 {
-	int			i;
-	int			numcl=0;
-
 	free( l->data );
 	l->data = 0;
 
-	for( i=0; i < 30; i++ )
-	{
-		if ( cl_array[i] == l )
-			cl_array[i] = 0;
-		if ( cl_array[i] )
-			numcl++;
-	}
+	Log(1,"lost connection : l=%p clients (%d)\r\n",l,numcl);
+
+	numcl--;
 }
 
 static	void	_clientData( SkLine *l, int pt, void *own, void *sys )
@@ -164,7 +162,7 @@ static	void	_clientData( SkLine *l, int pt, void *own, void *sys )
 
 	HttpStatAddClData();
 
-	Log(8,"_clientData: %d bytes (%d)\r\n",pck->len,l->data->cl_id);
+	Log(8,"_clientData: %d bytes (%d)\r\n",pck->len,l->fd);
 
 	if ( pck->len > 20000 )
 	{
@@ -188,21 +186,7 @@ static	void	_clientData( SkLine *l, int pt, void *own, void *sys )
 
 void	_clientConnected( SkLine *cl, int pt, void *own, void *sys )
 {
-	int		i;
-
-	for( i=0; i < 30; i++ )
-	{
-		if ( cl_array[i] == 0 )
-			break;
-	}
-	if ( i == 30 )
-	{
-		/* too many clients : disconnect */
-		Log(1,"too many clients - disconnect client\r\n");
-		skDisconnect( cl );
-		return;
-	}
-	cl_array[i] = cl;
+	numcl++;
 
 	skAddHandler( cl, SK_H_READABLE, _HReadable, 0 );
 	skAddHandler( cl, SK_H_PACKET, _clientData, 0 );
@@ -211,8 +195,7 @@ void	_clientConnected( SkLine *cl, int pt, void *own, void *sys )
 	cl->data = malloc( sizeof(struct _ClientData) );
 	memset(cl->data,0, sizeof(struct _ClientData) );
 
-	cl->data->cl_id = i;
-	Log(1,"new connection : clients (%d)\r\n",i);
+	Log(1,"new connection : l=%p clients (%d)\r\n",cl,numcl);
 }
 
 static	char	**g_av=0;
@@ -299,6 +282,14 @@ static void	_StartChild( void )
 	sigprocmask(SIG_SETMASK,&omask,NULL);
 }
 
+#ifdef MEM_CHECK
+static void _memCheck( SkTimerType tid, void *own )
+{
+	i_mstat(0);
+	skAddTimer(10000,_memCheck,&_memCheck);
+}
+#endif
+
 int main( int argc, char ** argv )
 {
 	int		i;
@@ -315,8 +306,6 @@ int main( int argc, char ** argv )
 
 	g_av=argv;
 	g_ac=argc;
-
-	memset( cl_array, 0, sizeof(cl_array) );
 
 	for( i=1; i < argc; i++ )
 	{
@@ -401,13 +390,17 @@ int main( int argc, char ** argv )
 
 	StartTimer();
 
-	jsonSend(0);
+	jsonInit();
+#ifdef MEM_CHECK
+	skAddTimer(10000,_memCheck,0);
+#endif
 
 	skMainLoop();
 
 	return( 0 );
 }
 
+#if 0
 static	void	WriteStat( SkLine *l, int ashtml, char *fmt, ... )
 {
 	va_list		args;
@@ -470,6 +463,7 @@ void	_ResetStatistik( void )
 		}
 	}
 }
+#endif
 
 void	_RestartMe( void )
 {
