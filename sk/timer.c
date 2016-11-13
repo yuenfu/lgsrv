@@ -4,6 +4,9 @@
 #include "Serv.h"
 #include "PQ.h"
 #include "time.h"
+#ifdef MEM_CHECK
+#include <fk/mchk.h>
+#endif
 
 typedef struct _Timer
 {

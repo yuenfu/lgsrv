@@ -50,7 +50,6 @@ static	int	__listen( SkLine *h )
 		setsockopt(h->fd, SOL_SOCKET, SO_REUSEADDR, (char*)&xxx, sizeof(int));
 	}
 #endif
-
 	if ( bind(h->fd, (struct sockaddr*)&insock, sizeof(insock)) )
 	{
 		close( h->fd );
@@ -58,7 +57,7 @@ static	int	__listen( SkLine *h )
 		return( -1 );
 	}
 
-	if ( listen( h->fd, 5 ) )
+	if ( listen( h->fd, 50 ) )
 	{
 		close( h->fd );
 		h->fd = -1;
@@ -70,6 +69,8 @@ static	int	__listen( SkLine *h )
 #if !defined(_WINDOWS) && !defined(_WIN32_WCE)
 	fcntl( h->fd, F_SETFD, &close_on_exec );
 #endif
+	fcntl( h->fd, F_SETFL, O_NONBLOCK );
+
 
 	return( 0 );
 }

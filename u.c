@@ -83,9 +83,13 @@
  * 19.09.2016   2.44   fx2 allow '&' in mail-config
  * 09.11.2016   2.45   fx2 do not hash line-recs, shrink line-cache
  * 10.11.2016   2.46   fx2 new json interface + var "JSON:CONNTIME","LGSRV:PID"
+ * 12.11.2016   2.47   fx2 bf: crash sending json command fixed
+ * 12.11.2016   2.48   fx2 bf: wrong ip for json
+ * 12.11.2016   2.49   fx2 bf: stop blocked accept() calls
+ * 13.11.2016   2.50   fx2 bf: use NONBLOCK on listen instead of using alarm()
 */
 
-char *cstr = "lg.srv, V2.46 compiled 10.11.2016, by fx2";
+char *cstr = "lg.srv, V2.50 compiled 13.11.2016, by fx2";
 
 int	debug = 0;		// increasing debug output (0 to 9)
 int		vmeth=0;

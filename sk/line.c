@@ -3,6 +3,9 @@
 #include <time.h>
 #include <signal.h>
 #include "Serv.h"
+#ifdef MEM_CHECK
+#include <fk/mchk.h>
+#endif
 
 static	SkLine		*root = 0;
 static	SkLine		*hash = 0;
@@ -32,6 +35,7 @@ static	void	_FreeLineCache( SkLine *l )
 
 	if ( l->out )
 		FreeValid( l->out->cache );
+
 	FreeValid( l->out );
 }
 
@@ -63,6 +67,8 @@ static	void	_HashLineRec( SkLine *l )
 			}
 		}
 	}
+free(l);
+return;
 	l->next = hash;
 	hash = l;
 }

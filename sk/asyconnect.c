@@ -1,6 +1,9 @@
 #include "Serv.h"
 #include <errno.h>
 #include <stdlib.h>
+#ifdef MEM_CHECK
+#include <fk/mchk.h>
+#endif
 
 struct hostent	*skGetHostByName( char *hostname )
 {

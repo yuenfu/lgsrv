@@ -1,6 +1,10 @@
 #include "PQ.h"
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef MEM_CHECK
+#include <fk/mchk.h>
+#endif
+
 
 PQueue *CreatePQueue(
 
@@ -58,7 +62,7 @@ void InsertPQueue( PQueue *that , void *entry )
 			if ( !ResizePQueue( that , (int)(that->size *1.1 + 3) ) )
 				return ;
 	/*
-		Das heisst : Die Größe wird skaliert , die Speicherverschwendung 
+		Das heisst : Die Grï¿½ï¿½e wird skaliert , die Speicherverschwendung 
 		betraegt maximal 60 Prozent .
 		Wenn der Platz knapp sein sollte , versucht er 	eine geringe Erweiterung.
 	*/

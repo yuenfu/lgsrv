@@ -1,4 +1,7 @@
 #include "Serv.h"
+#ifdef MEM_CHECK
+#include <fk/mchk.h>
+#endif
 
 static	SkHandler *_GetHandlerRec( void )
 {

@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include "Serv.h"
 
+#ifdef MEM_CHECK
+#include <fk/mchk.h>
+#endif
+
 #define XXV		0
 
 SkLine	*skAcceptFd( int fd )

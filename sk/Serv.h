@@ -7,7 +7,6 @@ extern	"C"	{
 
 #include <string.h>
 #include <malloc.h>
-
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/file.h>
@@ -59,6 +58,7 @@ typedef struct _SkCache
 	int				size;
 	int				fill;
 	int				ptr;
+	time_t			last_realloc;
 
 } SkCache;
 

@@ -2,6 +2,8 @@
 #include <signal.h>
 #include <stdarg.h>
 
+#undef JSON_REDIRECT
+
 #define SkLineData		struct _JsonData
 
 #include "NetDrv.h"
@@ -299,7 +301,11 @@ static void _establish4000( void )
 {
 	SkLine	*l;
 
+#ifdef JSON_REDIRECT
 	l=RawConnect("4000","192.168.28.30");
+#else
+	l=RawConnect("4000","127.0.0.1");
+#endif
 
 	if (!l )
 		return;
@@ -315,13 +321,12 @@ static void _establish4000( void )
 	if ( !alive_tid )
 		alive_tid=skAddTimer( 2000, _sendAlive, 0 );
 
-	printf("json: cmd connected\r\n");
+	Log(16,"json: cmd connected\r\n");
 }
 
 int	jsonSend( char *command )
 {
 	int		clen=command ? strlen(command) : 0;
-	SkLine	*l=0;
 
 	if ( clen > 512 )
 		return -1;
@@ -331,8 +336,8 @@ int	jsonSend( char *command )
 	return 0;
 #endif
 
-	if ( clen )
-		sendJSONPacket(l, command );
+	if ( clen && cmd_line )
+		sendJSONPacket(cmd_line , command );
 
 	return 0;
 }
