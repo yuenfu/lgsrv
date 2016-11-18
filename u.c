@@ -87,9 +87,18 @@
  * 12.11.2016   2.48   fx2 bf: wrong ip for json
  * 12.11.2016   2.49   fx2 bf: stop blocked accept() calls
  * 13.11.2016   2.50   fx2 bf: use NONBLOCK on listen instead of using alarm()
+ * 18.11.2016   2.51   fx2 fr: upload file 'setup.net.sh' will run at start
 */
 
-char *cstr = "lg.srv, V2.50 compiled 13.11.2016, by fx2";
+char *cstr = "lg.srv, V2.51 compiled 18.11.2016, by fx2";
+
+/*** sample : setup.net.sh (dhcp)      ***
+udhcpc -i wlan0 -n -t 5 &
+ *** sample :              (static ip) ***
+ifconfig wlan0 192.168.1.30 up
+route add default gw 192.168.1.1
+echo "nameserver 192.168.1.1" > /usr/etc/resolv.conf
+****/
 
 int	debug = 0;		// increasing debug output (0 to 9)
 int		vmeth=0;
@@ -378,6 +387,11 @@ int main( int argc, char ** argv )
 	ReadTimerFromFile();
 	ReadMailConfigFromFile();
 	HttpLoadCleaningRecord(0,0);
+
+/* load ip setup from file */
+	if (( access( "/usr/data/htdocs/lock.setup.net.sh" , R_OK ) != 0 )
+	 && ( access( "/usr/data/htdocs/setup.net.sh" , R_OK ) == 0 ))
+		system("sh /usr/data/htdocs/setup.net.sh");
 
 	if ( enacore )
 	{

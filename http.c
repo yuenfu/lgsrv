@@ -461,12 +461,13 @@ static	void	SendUploaded( SkLine *l )
 			}
 		}
 	}
-	else if (!strncmp(p,"status.html",11) ||
+	else if(!strncmp(p,"status.html",11) ||
 			!strncmp(p,"Motion.xml",10) ||
 			!strncmp(p,"Navi.xml",8) ||
 			!strncmp(p,"App.xml",7) ||
 			!strncmp(p,"SLAM_control.xml",16) ||
 			!strncmp(p,"status.txt",10) ||
+			!strncmp(p,"setup.net.sh",12) ||
 			!strncmp(p,"mail.cfg",8))
 	{
 		WriteSimpleHttp(l,"<span id=\"fname\">%s</span> was uploaded.<br>",p);
@@ -673,16 +674,74 @@ static	int	DoActivate( SkLine *l, char *param )
 			unlink("/usr/rcfg/SLAM_control.svd");
 		}
 	}
+	else if ( strstr(param,"setup.net.sh") )
+	{
+		FILE	*fp=0;
+		FILE	*fdest=0;
+		char	line[1024];
+		char	*to="/usr/data/htdocs/setup.net.sh";
+		char	*p;
+		int		fail=1;
 
-	if ( failed ) {
+		while(1)
+		{
+			fp=fopen(from,"r");
+			if ( !fp )
+				break;
+			fdest=fopen(to,"w");
+			if ( !fdest )
+				break;
+			while( fgets(line,1024,fp) )
+			{
+				p=strchr(line,'\r'); if ( p ) *p=0;
+				p=strchr(line,'\n'); if ( p ) *p=0;
+				fprintf(fdest,"%s\n",line);
+			}
+			fclose(fdest);
+			fdest=0;
+			fail=0;
+			break;
+		}
+		if ( fdest )
+			fclose(fdest);
+		if ( fp )
+			fclose(fp);
+
+		unlink(from);
+
+		if ( !fail )
+		{
+			WriteSimpleHttp( l, hdr_response "<h3>Installation successful</h3>");
+			if ( access( "/usr/data/htdocs/lock.setup.net.sh" , R_OK ) != 0 )
+			{
+				fp=popen("sh /usr/data/htdocs/setup.net.sh","r");
+				while( fp && fgets( line, 1024, fp ) )
+				{
+					WriteSimpleHttp( l, "%s%s","<br/>",line );
+				}
+				if ( fp )
+					fclose(fp);
+			}
+			return rc;
+		}
+		failed++;
+	}
+
+	if ( failed )
+	{
 		WriteSimpleHttp( l, hdr_response "<h3>Installation failed</h3>" );
-	} else {
-		if (reboot) {
-		   WriteSimpleHttp( l, hdr_response "<h3>Installation successful</h3><br />You just uploaded a xml configuration file. <br />The file was copied to the correct location but your Hombot will only act to the new configuration after you reboot your system:<br /><input type=\"button\" id=\"reboot\" value=\"Reboot System\" />" );
-      } else {
+	}
+	else
+	{
+		if (reboot)
+		{
+		   WriteSimpleHttp( l, hdr_response "<h3>Installation successful</h3><br/>You just uploaded a xml configuration file. <br />The file was copied to the correct location but your Hombot will only act to the new configuration after you reboot your system:<br /><input type=\"button\" id=\"reboot\" value=\"Reboot System\" />" );
+		}
+		else
+		{
 		   WriteSimpleHttp( l, hdr_response "<h3>Installation successful</h3><input type=\"button\" id=\"refresh\" value=\"Reload Page\" />" );
 		}
-   }
+	}
 	return rc;
 }
 
