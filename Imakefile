@@ -11,13 +11,13 @@ CDEBUGFLAGS= -Os -g
 #DEFINES += -DJSON_SIMUL
 
 SKIT = sk/line.o sk/timer.o sk/handler.o sk/accept.o sk/asyconnect.o
-FKIT = fk/priqueue.o
+FKIT = fk/priqueue.o fk/skip.o
 
 SYSLIBS=-Lzlib -lz -lrt -Lssl -lssl -lcrypto
 INCLUDES = -I. -Isk -Ifk -Izlib -Issl
 
 OBJ2 = u.o listen.o rd2.o write.o $(SKIT) $(FKIT) http.o vinter.o www.o proc.o
-OBJ2+= json.o timer.o base64.o mail.o
+OBJ2+= json.o timer.o base64.o mail.o param.o
 
 SingleProgramTarget(lg.srv.unstripped,$(OBJ2) $(LOCAL_LIBRARIES),,$(SYSLIBS))
 
@@ -25,3 +25,6 @@ all:: lg.srv
 
 lg.srv: lg.srv.unstripped
 	$(STRIP) -o lg.srv lg.srv.unstripped
+
+clean::
+	rm -f $(SKIT) $(FKIT)

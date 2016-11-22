@@ -185,6 +185,7 @@ typedef struct _MailVars
 	char	*response;
 } MailVars;
 
+extern	void	_Cnv26( char *in );
 extern	void	ReadMailConfigFromFile( void );
 extern	int		sendMail( char *subject, char *text );
 extern	void	NewState( char *stext );
@@ -194,4 +195,9 @@ extern	void	SndMailAddLog( int to_response, char *fmt, ... );
 /* base64.c */
 extern	size_t	base64_decode(char *source, unsigned char *target, size_t targetlen);
 extern	int		base64_encode(unsigned char *source, size_t sourcelen, char *target, size_t targetlen);
+
+/* param.c */
+extern	void	InitParams( void );
+extern	void	RunFreeParams(char *param);
+
 #endif

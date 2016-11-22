@@ -1092,7 +1092,7 @@ void	ReadMailConfigFromFile( void )
 	}
 }
 
-static void _Cnv26( char *in )
+void _Cnv26( char *in )
 {
 	char	*p;
 	int		l;

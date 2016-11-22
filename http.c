@@ -145,6 +145,13 @@ Keep-Alive: timeout=2, max=2000\r\n\
 Content-Type: application/octet-stream\r\n\
 \r\n"
 
+#define hdr_not_found "HTTP/1.1 404 Not Found\r\n\
+Server: luigi internal V1.0 (Linux)\r\n\
+Connection: Keep-Alive\r\n\
+Access-Control-Allow-Origin: *\r\n\
+Keep-Alive: timeout=2, max=2000\r\n\
+Content-Type: text/html\r\n\
+\r\n"
 
 
 static	void	WriteSimpleHttp(SkLine *l, char *fmt, ...)
@@ -486,7 +493,7 @@ static	void	SendUploadFail( SkLine *l )
 
 static	void	SendNoPage( SkLine *l )
 {
-	WriteSimpleHttp( l, hdr "<html><body>unknown REQUEST!</body></html>" );
+	WriteSimpleHttp( l, hdr_not_found "<html><body>file not found</body></html>" );
 }
 
 static	int	movefile( char *from, char *to )
@@ -1161,7 +1168,7 @@ static	void	SendFile( SkLine *l, char *fname, char *param )
 		if ( !fp )
 		{
 //printf("file not found : %s\n",fname);
-			WriteSimpleHttp( l, hdr "<body>file not found : 401<br />" );
+			WriteSimpleHttp( l, hdr_not_found "<body>file not found<br />" );
 			WriteSimpleHttp( l, "</body></html>");
 			skCloseAtEmpty(l);
 			num_open--;
@@ -1232,7 +1239,7 @@ static	void	SendFile( SkLine *l, char *fname, char *param )
 				fd=__t_open( fname );
 				if ( fd == -1 )
 				{
-					WriteSimpleHttp( l, hdr "<body>file not found : 401<br />" );
+					WriteSimpleHttp( l, hdr_not_found "<body>file not found<br />" );
 					WriteSimpleHttp( l, "</body></html>");
 					skCloseAtEmpty(l);
 					num_open--;
@@ -1843,6 +1850,45 @@ static		int		cur_mode=-1;
 		}
 		*q=0;
 		RunMailCfgParam(locdata);
+		SendFile(l,def,"");
+		skCloseAtEmpty(l);
+		return;
+	}
+	else if ( !strncmp(data,"GET /sites/setparam.html?",25) )
+	{
+//		char			def[32]="param.txt ";
+		char			def[32]="/sites/setparam.html? ";
+		char			locdata[1024];
+		char			*p, *q;
+		char  			hx[3];
+		unsigned int	b;
+		int				f=0;
+
+		for( p=data+25, q=locdata; *p; f++, p++, q++ )
+		{
+			if ( f == 510 )
+				break;
+			if ( *p == ' ' )
+				break;
+			if ( *p != '%' )
+			{
+				*q=*p;
+				continue;
+			}
+			memcpy(hx,p+1,2);
+			hx[2]=0;
+			if ( !strcmp(hx,"26") )	/* do not convert & */
+			{
+				*q=*p;
+				continue;
+			}
+			sscanf(hx,"%x",&b);
+			*q=b;
+			p+=2;
+			continue;
+		}
+		*q=0;
+		RunFreeParams(locdata);
 		SendFile(l,def,"");
 		skCloseAtEmpty(l);
 		return;

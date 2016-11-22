@@ -88,9 +88,10 @@
  * 12.11.2016   2.49   fx2 bf: stop blocked accept() calls
  * 13.11.2016   2.50   fx2 bf: use NONBLOCK on listen instead of using alarm()
  * 18.11.2016   2.51   fx2 fr: upload file 'setup.net.sh' will run at start
+ * 22.11.2016   2.52   fx2 fr: page not found: 404 & sites/setparam.html?
 */
 
-char *cstr = "lg.srv, V2.51 compiled 18.11.2016, by fx2";
+char *cstr = "lg.srv, V2.52 compiled 22.11.2016, by fx2";
 
 /*** sample : setup.net.sh (dhcp)      ***
 udhcpc -i wlan0 -n -t 5 &
@@ -409,6 +410,8 @@ int main( int argc, char ** argv )
 	StartTimer();
 
 	jsonInit();
+	InitParams();
+
 #ifdef MEM_CHECK
 	skAddTimer(10000,_memCheck,0);
 #endif
