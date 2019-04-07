@@ -142,7 +142,7 @@ static void LoadParamsFromFile( void )
 	while( fgets( buff, 1024, fp ) )
 	{
 		len=strlen(buff);
-		if ( !len < 2 )
+		if ( !(len < 2) )
 			continue;
 		p=strchr(buff+len-2,'\r'); if(p)*p=0;
 		p=strchr(buff+len-2,'\n'); if(p)*p=0;
