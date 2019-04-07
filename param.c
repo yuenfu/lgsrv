@@ -153,6 +153,7 @@ static void LoadParamsFromFile( void )
 
 		_addParam(buff,p+1);
 	}
+	fclose(fp);
 }
 
 void	InitParams( void )

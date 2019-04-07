@@ -106,12 +106,15 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 	ip = malloc(sizeof(struct in_addr));
 	memcpy(ip,he->h_addr,4);
 	fd = socket( AF_INET, SOCK_STREAM, 0 );
-	if ( fd == -1 )
+	if ( fd == -1 ) {
+		free(ip);
 		return -5;
+	}
 
 	insock.sin_family = AF_INET;
 	insock.sin_port = htons(slport);
 	memcpy((char*)&insock.sin_addr,(char*)ip,sizeof(struct in_addr));
+	free(ip);
 
 	Log(2,"sendMail: connect to %s:%ld\r\n",buffer,slport);
 	if( connect(fd, (struct sockaddr*)&insock,
@@ -713,12 +716,15 @@ static	int getMail( int bg  )
 	ip = malloc(sizeof(struct in_addr));
 	memcpy(ip,he->h_addr,4);
 	fd = socket( AF_INET, SOCK_STREAM, 0 );
-	if ( fd == -1 )
+	if ( fd == -1 ) {
+		free(ip);
 		return -5;
+	}
 
 	insock.sin_family = AF_INET;
 	insock.sin_port = htons(gport);
 	memcpy((char*)&insock.sin_addr,(char*)ip,sizeof(struct in_addr));
+	free(ip);
 
 	if( connect(fd, (struct sockaddr*)&insock,
 				 sizeof(struct sockaddr_in)) != 0 )
