@@ -41,7 +41,7 @@ static int _sendMail2Recv( char *subject, char *text, char *receiver )
 	unsigned short	defport=465;
 	SSL				*ssl=0;
 	SSL_CTX			*ctx=0;
-	SSL_METHOD		*method=0;
+	const SSL_METHOD	*method=0;
 	char			luser[128];
 	char			*auth_user=luser;
 	int				usessl=1;
@@ -677,7 +677,7 @@ static	int getMail( int bg  )
 	int				wait4sub=1;
 	SSL				*ssl=0;
 	SSL_CTX			*ctx=0;
-	SSL_METHOD		*method=0;
+	const SSL_METHOD	*method=0;
 	int				dodelete=0;
 	char			*subject_value=0;
 	char			*from_value=0;
