@@ -91,7 +91,7 @@
  * 22.11.2016   2.52   fx2 fr: page not found: 404 & sites/setparam.html?
 */
 
-char *cstr = "lg.srv, V2.52 compiled 22.11.2016, by fx2";
+char *cstr = "lg.srv, V2.53, "__DATE__", "__TIME__;
 
 /*** sample : setup.net.sh (dhcp)      ***
 udhcpc -i wlan0 -n -t 5 &
