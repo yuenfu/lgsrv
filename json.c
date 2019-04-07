@@ -196,7 +196,7 @@ static	void	_sessionData( SkLine *l, int pt, void *own, void *sys )
 	short			len;
 	int				i=0;
 
-	Log(16,"json: session Data received '%s'\r\n",len>12?data+12:"....");
+	Log(16,"json: session Data received '%s'\r\n",size>12?data+12:"....");
 	while( size > 12 )
 	{
 		memcpy(&len,data+8,2);
