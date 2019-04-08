@@ -9,6 +9,7 @@
 #include "NetDrv.h"
 
 extern	JsonVars	json;
+extern void	_clientData( SkLine *l, int pt, void *own, void *sys );
 
 static void makeHeader(unsigned char* paramArrayOfByte, int paramInt1,
 	unsigned char paramByte,

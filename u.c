@@ -132,7 +132,7 @@ static	void	_clientClose( SkLine *l, int pt, void *own, void *sys )
 	numcl--;
 }
 
-static	void	_clientData( SkLine *l, int pt, void *own, void *sys )
+void	_clientData( SkLine *l, int pt, void *own, void *sys )
 {
 	SkPacket	*pck = sys;
 	int			i;
