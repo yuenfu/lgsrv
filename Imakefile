@@ -1,20 +1,22 @@
 
-#CDEBUGFLAGS= -g
-DEFINES = -DDEBUG_RAW -DDEBUG -Wall
-CC = /usr/local/angstrom/arm/bin/arm-angstrom-linux-gnueabi-gcc
-STRIP = /usr/local/angstrom/arm/bin/arm-angstrom-linux-gnueabi-strip
-CDEBUGFLAGS= -Os -g
+ifeq (0,0)
+	CC = /usr/local/arm/4.1.2/bin/arm-linux-gnueabi-gcc
+	DEFINES = -DDEBUG_RAW -DDEBUG -Wall
+	INCLUDES = -I. -Isk -Ifk -Ilib/zlib-1.1.4 -Ilib/openssl-0.9.8k/include
+	STRIP = /usr/local/arm/4.1.2/bin/arm-linux-gnueabi-strip
+	SYSLIBS= -lrt -Lso -lz -lssl -lcrypto
+else
+	CC = gcc
+	DEFINES += -DJSON_SIMUL
+	INCLUDES = -I. -Isk -Ifk
+	STRIP = strip
+	SYSLIBS= -lrt -lz -lssl -lcrypto
+endif
 
-#CC = gcc
-#STRIP = strip
-#CDEBUGFLAGS= -g
-#DEFINES += -DJSON_SIMUL
+CDEBUGFLAGS= -Os -ggdb
 
 SKIT = sk/line.o sk/timer.o sk/handler.o sk/accept.o sk/asyconnect.o
 FKIT = fk/priqueue.o fk/skip.o
-
-SYSLIBS=-Lzlib -lz -lrt -Lssl -lssl -lcrypto
-INCLUDES = -I. -Isk -Ifk -Izlib -Issl
 
 OBJ2 = u.o listen.o rd2.o write.o $(SKIT) $(FKIT) http.o vinter.o www.o proc.o
 OBJ2+= json.o timer.o base64.o mail.o param.o
