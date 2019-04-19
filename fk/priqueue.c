@@ -1,6 +1,7 @@
-#include "PQ.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include "PQ.h"
+
 #ifdef MEM_CHECK
 #include <fk/mchk.h>
 #endif

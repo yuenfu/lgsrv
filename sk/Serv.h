@@ -24,10 +24,6 @@ extern	"C"	{
 typedef	unsigned int	s__u32;
 typedef	int				s__32;
 
-#if (! defined linux) || (__GNUC__ >= 3) || defined(__x86_64__)
-#pragma pack ( push, 4 ) /* Windows oder gcc 3.x.y */
-#endif
-
 typedef struct _SkDgPacket
 {
 	char			*data;
