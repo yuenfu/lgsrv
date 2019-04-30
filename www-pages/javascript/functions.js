@@ -37,6 +37,33 @@ $(document).ready(function() {
 	$('#homing').click(function() {
 		$.ajax({ url: "/json.cgi?%7b%22COMMAND%22:%22HOMING%22%7d" });
 	});
+	$('#forward').click(function() {
+		$.ajax({ url: "/json.cgi?%7b%22JOY%22:%22FORWARD%22%7d" });
+	});
+	$('#backward').click(function() {
+		$.ajax({ url: "/json.cgi?%7b%22JOY%22:%22BACKWARD%22%7d" });
+	});
+	$('#left').click(function() {
+		$.ajax({ url: "/json.cgi?%7b%22JOY%22:%22LEFT%22%7d" });
+	});
+	$('#right').click(function() {
+		$.ajax({ url: "/json.cgi?%7b%22JOY%22:%22RIGHT%22%7d" });
+	});
+	$('#forward_left').click(function() {
+		$.ajax({ url: "/json.cgi?%7b%22JOY%22:%22FORWARD_LEFT%22%7d" });
+	});
+	$('#forward_right').click(function() {
+		$.ajax({ url: "/json.cgi?%7b%22JOY%22:%22FORWARD_RIGHT%22%7d" });
+	});
+	$('#backward_left').click(function() {
+		$.ajax({ url: "/json.cgi?%7b%22JOY%22:%22BACKWARD_LEFT%22%7d" });
+	});
+	$('#backward_right').click(function() {
+		$.ajax({ url: "/json.cgi?%7b%22JOY%22:%22BACKWARD_RIGHT%22%7d" });
+	});
+	$('#release').click(function() {
+		$.ajax({ url: "/json.cgi?%7b%22JOY%22:%22RELEASE%22%7d" });
+	});
 	
 	$('#setdatetime').click(function() {
 		var date = $('#datepicker').val();
